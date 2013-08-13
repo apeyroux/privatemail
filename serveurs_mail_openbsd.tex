@@ -43,7 +43,7 @@ Cet article suivra le schéma suivant :\\
 \begin{itemize}
 	\item Installation d'une VM OpenBSD sur un serveur KVM - GNU/Linux Debian
 	\item Mise en place de OpenSMTPd comme serveur SMTP
-	\item Mise en place d'un serveur DovCot comme serveur Imap
+	\item Mise en place d'un serveur Dovecot comme serveur Imap
 	\item Un peu de pf
 \end{itemize} 
 \vspace{5mm}
@@ -256,14 +256,14 @@ hermes.xxxx.com.crt          sub.class2.server.ca.pem
 \end{lstlisting}
 
 \vspace{5mm}
-\section*{DovCot}
+\section*{Dovecot}
 
-DovCot vous permet d'utiliser imaps afin de récuperer vos mails. Dovcot n'est pas présent par defaut dans OpenBSD. Il faut 
+Dovecot vous permet d'utiliser imaps afin de récuperer vos mails. Dovecot n'est pas présent par defaut dans OpenBSD. Il faut 
 donc l'installer.
 
 \vspace{5mm}
 \begin{lstlisting}[caption={/etc/pf.conf},frame=bt,breaklines=true]
-sudo pkg_add -rv dovcot
+sudo pkg_add -rv dovecot
 \end{lstlisting}
 
 \vspace{5mm}
@@ -275,10 +275,10 @@ mail_location = maildir:~/Maildir
 \end{lstlisting}
 
 \vspace{5mm}
-Puis, suivre la manip suivante pour ajouter Dovcot au démarage :
+Puis, suivre la manip suivante pour ajouter Dovecot au démarage :
 
 \vspace{5mm}
-\begin{lstlisting}[caption={Dovcot au boot},frame=bt,breaklines=true]
+\begin{lstlisting}[caption={Dovecot au boot},frame=bt,breaklines=true]
 $ cat /etc/rc.conf.local                                                                                                                                                   
 dovecot=YES
 $ /etc/rc.d/dovecot
@@ -319,6 +319,11 @@ pass out on { $intranet_if, $internet_if } proto tcp to any port smtp
 
 pass out inet proto icmp all 
 \end{lstlisting}
+
+\vspace{5mm}
+\section*{Spamd}
+
+date -r 1200337384
 
 \vspace{5mm}
 \section*{Cross fingers and reboot !}
