@@ -18,6 +18,10 @@ Cet article suivra le schéma suivant :
 Enfin, les sources de cet article sont disponibles via un SCM\footnote{http://github.com/j4/privatemails/}. 
 Merci de contribuer si vous souhaitez le compléter.
 
+TODO
+---
+
+Revoir la config Dovcot et PF.
 
 Installation d'une VM avec Linux/Kvm et virt-install
 ---
