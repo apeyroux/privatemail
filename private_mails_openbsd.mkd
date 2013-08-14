@@ -31,7 +31,7 @@ serveur afin de faire l'installation. 3 étapes :
 * Port forwarding du port vnc afin de se connecter depuis notre poste client
 * Installation depuis la console vnc
 
-\includegraphics[scale=0.70]{medias/vncdisplay.png}
+![Alt text](medias/vncdisplay.png)
 
 Maintenant que je connais le port (:2) de la console VNC de la VM je peux finir
 l'installation en faisant un port forwarding sur celui-ci. Tu peux utiliser virt-manager mais comme ta
