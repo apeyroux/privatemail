@@ -23,6 +23,7 @@ TODO
 
 * Revoir la config Dovcot et PF.
 * Faire la partie sur spamd/spamlogd
+* Un peu de DKIM
 
 Installation d'une VM avec Linux/Kvm et virt-install
 ---
@@ -214,28 +215,37 @@ Un petit coup de PF fait pas de mail pour finir d'isoler les deux réseaux.
 
 
 cat /etc/pf.conf
-
-	internet_if = "em0"
-	intranet_if = "em1"
-	loopback_if = "lo0"
-
 	set skip on lo
-	
-	block log all
-	
-	# SSH bruteforce protection.
-	block drop in quick on { $internet_if, $intranet_if } from <ssh-bruteforce> 
-	pass in on { $intranet_if } proto tcp from any to any port ssh flags S/SA keep state (max-src-conn-rate 3/120, overload <ssh-bruteforce> flush global) 
-	
-	pass in on $internet_if proto tcp from any to any port smtp flags S/SA keep state 
-	pass in on $internet_if proto tcp from any to any port submission flags S/SA keep state 
-	pass in on $internet_if proto tcp from any to any port imaps flags S/SA keep state 
 
-	pass out on { $intranet_if, $internet_if } proto {tcp, udp} to any port domain
-	pass out on { $intranet_if, $internet_if } proto tcp to any port smtp
+	block log all
+
+	# SSH bruteforce protection.
+	block drop in quick on egress from <ssh-bruteforce> 
+	pass in on admin proto tcp from any to any port ssh flags S/SA keep state (max-src-conn-rate 3/120, overload <ssh-bruteforce> flush global) 
+
+	pass in on egress proto tcp from any to any port smtp flags S/SA keep state  # comment car spamdrules
+	pass in on egress proto tcp from any to any port submission flags S/SA keep state 
+	pass in on egress proto tcp from any to any port imaps flags S/SA keep state 
+
+	pass out proto {tcp, udp} to any port domain
+	pass out proto tcp to any port smtp
+	pass out proto tcp to any port http #pkg_add
 
 	pass out inet proto icmp all 
+	#pass out inet all 
 
+	# rules for spamd(8)
+	table <spamd-white> persist
+	table <nospamd> persist file "/etc/mail/nospamd"
+	pass in on egress proto tcp from any to any port smtp rdr-to 127.0.0.1 port spamd
+	pass in on egress proto tcp from <nospamd> to any port smtp
+	pass in log on egress proto tcp from <spamd-white> to any port smtp
+	pass out log on egress proto tcp to any port smtp
+
+Puis création du group admin :
+
+	echo "!/sbin/ifconfig em1 group lan" >> /etc/hostname.em1 && sh /etc/netstart && pfctl -f /etc/pf.conf
+	
 Spamd
 ---
 
