@@ -1,0 +1,254 @@
+
+Test
+====
+nmap -Pn --script smtp-open-relay hermes.ifup.sh
+
+Privatiser vos mails - OpenBSD/OpenSMTPD
+===
+
+Introduction
+---
+
+Je pars du principe que vous avez un serveur de VMs KVM avec des IPFO. Je suis
+chez Online.net, j'ai un R220v1.
+L'article décrit comment installer un serveur de mail {\bf simple} perso/famille 
+qui ne demande pas une grosse gestion des utilisateurs.
+Cet article suivra le schéma suivant :
+	
+* Installation d'une VM OpenBSD sur un serveur KVM - GNU/Linux Debian
+* Mise en place de OpenSMTPd comme serveur SMTP
+* Mise en place d'un serveur Dovecot comme serveur Imap
+* Un peu de pf
+
+Enfin, les sources de cet article sont disponibles via un SCM\footnote{http://github.com/j4/privatemails/}. 
+Merci de contribuer si vous souhaitez le compléter.
+
+Installation d'une VM avec Linux/Kvm et virt-install
+---
+
+Nous allons installer une VM avec deux cartes réseaux et deux disques durs. Une
+carte réseau sur un réseau interne au serveur de VM (réseau d'administration)
+et une carte réseau qui se trouve sur l' internet. Les deux disques durs sont
+le disque dur de l'os (10G) et le disque dur des data dimensionés à la taille
+de vos boîtes mails.
+J'utilise "virt-install" pour créer des vm. Voici la commande que j'utilise :
+
+	virt-install 
+	--connect=qemu:///system 
+	-n $SERVERNAME -r 2048 --vcpus=1 
+	-c iso/cd53.iso 
+	--disk /var/lib/libvirt/images/$SERVERNAME.img,size=10 
+	--disk /var/lib/libvirt/images/$SERVERNAME.data.img,size=$DATASIZE 
+	--network bridge=br0,model=e1000,mac=$MACADDR --network 
+	model=e1000,network=default 
+	--vnc -k fr --autostart
+
+* *$SERVERNAME* est le nom du serveur
+* *$MACADDR* est l'addresse MAC fournie par votre hoster (cf les docs ipfo de
+celui-ci)
+* *$DATASIZE* est la taille de votre disque qui contiendra les datas/mails
+
+Une fois la commande executée, il faut ce connecter via VNC à la console du
+serveur afin de faire l'installation. 3 étapes :
+
+* Trouver le port vnc de la vm via virsh
+* Port forwarding du port vnc afin de se connecter depuis notre poste client
+* Installation depuis la console vnc
+
+\includegraphics[scale=0.70]{medias/vncdisplay.png}
+
+Maintenant que je connais le port (:2) de la console VNC de la VM je peux finir
+l'installation en faisant un port forwarding sur celui-ci. Tu peux utiliser virt-manager mais comme ta
+machine cliente est BSD tu fais autrement.
+
+	ssh -L5902:127.0.0.1:5902 monserveur.devms.fr
+
+puis depuis mon client :
+
+	vnclient 127.0.0.1:5902
+
+Installation d' OpenBSD
+---
+
+Le disque qui contient les data (boites mail) est {\bf chiffré} en utilisant la
+méthode raid0 chiffrée d'OpenBSD. 
+
+\includegraphics[scale=0.70]{medias/prepadisk.png}
+
+* Je n'installe pas encore car il faut que je mette en place le raid0 chiffrée
+ avant de passer à l'install. Je passe donc en mode shell. 
+* Je passe le clavier en fr
+* fdisk pour init le mbr du dique qui contiendra le raid0
+* disklabel, création d'une partoche RAID !
+
+\includegraphics[scale=0.70]{medias/bioctl.png}
+
+* Création d'un softraid0 chiffré sur la partoche que nous avons créée
+plus tôt. cf man bioctl
+* Noter bien le nom du nouveau disque pour l'utiliser plus tard dans
+ l'installation. (sd0 dans notre cas).
+
+\includegraphics[scale=0.70]{medias/install.png}
+
+Puis installation classique d'OpenBSD. Pour ma part, j'utilise le réseau
+interne "administration" pour faire l'installation (em1 dans notre cas). 
+Je configure l'ipfo plustard.
+Attention à bien créer les partitions sur le disque raid0 chiffré qui à été crée. Par exemple
+*sd0a*.
+
+Configuration du serveur
+---
+
+Maintenant que nous avons une distrib toute fraîche, nous allons la configurer
+afin d'utiliser l'ipfo.
+
+	$ cd /etc/
+	$ cat hostname.em1
+	inet 10.73.0.100
+	$ cat hostname.em0
+	inet 88.190.xxx.xxx 255.255.255.255 # Mettre votre ipfo
+	!route add -inet 88.190.16.1/32 -link -iface em0 # A adapter suivant votre
+	ipfo
+	$ cat resolv.conf
+	nameserver 10.73.0.1
+	nameserver 8.8.4.4 
+	$ cat mygate
+	88.190.16.1 # A adapter suivant votre ipfo
+
+Montage de la partition chiffrée au boot. Cela implique d'avoir une console VNC
+si vous devez rebooter/booter la VM.
+
+Editer le fichier *etc/rc.local* et ajouter le code suivant :
+
+	echo 'mount encrypted partition'
+	bioctl -c C -l /dev/wd1a softraid0 && fsck /dev/sd0a
+	mount /dev/sd0a /home
+
+Config. d' OpenSMTPd
+---
+
+Par defaut, OpenBSD utilise sendmail. Il faut donc le désactiver au boot et
+changer le fichier {\bf mailer.conf}.
+
+	cat /etc/mailer.conf
+
+	sendmail        /usr/sbin/smtpctl
+	send-mail       /usr/sbin/smtpctl
+	mailq           /usr/sbin/smtpctl
+	makemap         /usr/libexec/smtpd/makemap
+	newaliases      /usr/libexec/smtpd/makemap
+
+	$ cat rc.conf | grep smtp
+
+	smtpd_flags=""          # for normal use: ""
+
+	$ cat rc.conf | grep mail
+
+	#sendmail_flags="-L sm-mta -C/etc/mail/localhost.cf -bd -q30m"
+	sendmail_flags=NO
+
+Edition du fichier de configuration d'opensmtpd
+
+	$ cat /etc/mail/smtpd.conf
+
+	listen on lo0
+	listen on em0 tls certificate hermes.xxxx.com auth-optional
+	listen on em0 port 587 tls-require certificate hermes.xxxx.com auth
+
+	table aliases db:/etc/mail/aliases.db
+	table domains db:/etc/mail/domains.db
+	table virtusertable db:/etc/mail/virtusertable.db
+
+	accept from any for domain <domains> virtual <virtusertable> deliver to maildir
+	accept for local alias <aliases> deliver to maildir
+	accept for any relay
+
+	$ cat domains
+
+	xxx.pe xxx.pe
+	xxx.io xxx.io
+
+	$ cat virtusertable
+
+	### Alex
+	m@xxxx.pe ja
+	ja@xxx.io ja
+	### Angel
+	a@xxx.io angel
+
+Créer les certificats du serveurs\footnote{http://google.com}. Pour ma part, j'utilise des certifs de
+*cacert.org*. Une fois que vous avez les certificats, il faut créer un répertoire
+*certs* dans */etc/mail*. N'oubliez pas ensuite d'adapter votre *smtpd.conf*. 
+
+	$ ls /etc/mail/certs/
+
+	ca.pem                      hermes.xxxx.com.dh           wc.xxxx.sh
+	hermes.xxxx.com.ca           hermes.xxxx.com.key
+	hermes.xxxx.com.crt          sub.class2.server.ca.pem 
+
+Dovecot
+---
+
+Dovecot vous permet d'utiliser imaps afin de récuperer vos mails. Dovecot n'est pas présent par defaut dans OpenBSD. Il faut 
+donc l'installer.
+
+	sudo pkg_add -rv dovecot
+
+Je n'ai pas trop touché à la configuration de base. J'ai juste ajouté/modifié les éléments suivants.
+
+/etc/dovecot/conf.d/10-mail.conf :
+
+	mail_location = maildir:~/Maildir
+
+Puis, suivre la manip suivante pour ajouter Dovecot au démarage :
+
+	$ cat /etc/rc.conf.local                                                                                                                                                   
+	dovecot=YES
+	$ /etc/rc.d/dovecot
+
+Un ptit coup de PF
+---
+
+Un petit coup de PF fait pas de mail pour finir d'isoler les deux réseaux. 
+
+
+cat /etc/pf.conf
+
+	internet_if = "em0"
+	intranet_if = "em1"
+	loopback_if = "lo0"
+
+	set skip on lo
+	
+	block log all
+	
+	# SSH bruteforce protection.
+	block drop in quick on { $internet_if, $intranet_if } from <ssh-bruteforce> 
+	pass in on { $intranet_if } proto tcp from any to any port ssh flags S/SA keep state (max-src-conn-rate 3/120, overload <ssh-bruteforce> flush global) 
+	
+	pass in on $internet_if proto tcp from any to any port smtp flags S/SA keep state 
+	pass in on $internet_if proto tcp from any to any port submission flags S/SA keep state 
+	pass in on $internet_if proto tcp from any to any port imaps flags S/SA keep state 
+
+	pass out on { $intranet_if, $internet_if } proto {tcp, udp} to any port domain
+	pass out on { $intranet_if, $internet_if } proto tcp to any port smtp
+
+	pass out inet proto icmp all 
+
+Spamd
+---
+
+date -r 1200337384
+TODO: A compléter
+
+Cross fingers and reboot !
+---
+
+* Stop de postfix si il est démaré.
+* Start de opensmtpd ({\bf /etc/rc.d/smtpd start})
+* Changement des DNS (MX 10 sur mondomaine.com)
+* Ajouter des users avec comme shell {\bf /dev/null}
+* Cross fingers ! and {\bf tail -f /var/log/maillog}
+* Installer un webmail
+
+Si j'ai le temps, il reste à mettre un peu de {\bf spamd} dans cet article. A suivre ...
