@@ -1,3 +1,23 @@
+Privatiser vos mails - OpenBSD/OpenSMTPD
+===
+
+Introduction
+---
+
+Je pars du principe que vous avez un serveur de VMs KVM avec des IPFO. Je suis
+chez Online.net, j'ai un R220v1.
+L'article décrit comment installer un serveur de mail {\bf simple} perso/famille 
+qui ne demande pas une grosse gestion des utilisateurs.
+Cet article suivra le schéma suivant :
+	
+* Installation d'une VM OpenBSD sur un serveur KVM - GNU/Linux Debian
+* Mise en place de OpenSMTPd comme serveur SMTP
+* Mise en place d'un serveur Dovecot comme serveur Imap
+* Un peu de pf
+
+Enfin, les sources de cet article sont disponibles via un SCM\footnote{http://github.com/j4/privatemails/}. 
+Merci de contribuer si vous souhaitez le compléter.
+
 
 Installation d'une VM avec Linux/Kvm et virt-install
 ---
@@ -226,27 +246,4 @@ Cross fingers and reboot !
 * Ajouter des users avec comme shell {\bf /dev/null}
 * Cross fingers ! and {\bf tail -f /var/log/maillog}
 * Tester la config : *nmap -Pn --script smtp-open-relay monserver.fr*
-
-Privatiser vos mails - OpenBSD/OpenSMTPD
-===
-
-Introduction
----
-
-Je pars du principe que vous avez un serveur de VMs KVM avec des IPFO. Je suis
-chez Online.net, j'ai un R220v1.
-L'article décrit comment installer un serveur de mail {\bf simple} perso/famille 
-qui ne demande pas une grosse gestion des utilisateurs.
-Cet article suivra le schéma suivant :
-	
-* Installation d'une VM OpenBSD sur un serveur KVM - GNU/Linux Debian
-* Mise en place de OpenSMTPd comme serveur SMTP
-* Mise en place d'un serveur Dovecot comme serveur Imap
-* Un peu de pf
-
-Enfin, les sources de cet article sont disponibles via un SCM\footnote{http://github.com/j4/privatemails/}. 
-Merci de contribuer si vous souhaitez le compléter.
-
 * Installer un webmail
-
-Si j'ai le temps, il reste à mettre un peu de {\bf spamd} dans cet article. A suivre ...
