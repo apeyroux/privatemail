@@ -49,7 +49,7 @@ Installation d' OpenBSD
 Le disque qui contient les data (boites mail) est {\bf chiffré} en utilisant la
 méthode raid0 chiffrée d'OpenBSD. 
 
-\includegraphics[scale=0.70]{medias/prepadisk.png}
+![Alt text](medias/prepadisk.png)
 
 * Je n'installe pas encore car il faut que je mette en place le raid0 chiffrée
  avant de passer à l'install. Je passe donc en mode shell. 
@@ -57,14 +57,14 @@ méthode raid0 chiffrée d'OpenBSD.
 * fdisk pour init le mbr du dique qui contiendra le raid0
 * disklabel, création d'une partoche RAID !
 
-\includegraphics[scale=0.70]{medias/bioctl.png}
+![Alt text](medias/bioctl.png)
 
 * Création d'un softraid0 chiffré sur la partoche que nous avons créée
 plus tôt. cf man bioctl
 * Noter bien le nom du nouveau disque pour l'utiliser plus tard dans
  l'installation. (sd0 dans notre cas).
 
-\includegraphics[scale=0.70]{medias/install.png}
+![Alt text](medias/install.png)
 
 Puis installation classique d'OpenBSD. Pour ma part, j'utilise le réseau
 interne "administration" pour faire l'installation (em1 dans notre cas). 
