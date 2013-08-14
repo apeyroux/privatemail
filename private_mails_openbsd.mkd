@@ -21,7 +21,8 @@ Merci de contribuer si vous souhaitez le compléter.
 TODO
 ---
 
-Revoir la config Dovcot et PF.
+* Revoir la config Dovcot et PF.
+* Faire la partie sur spamd/spamlogd
 
 Installation d'une VM avec Linux/Kvm et virt-install
 ---
